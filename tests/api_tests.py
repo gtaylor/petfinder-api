@@ -82,7 +82,7 @@ class ShelterTests(BaseCase):
 
     def test_shelter_find(self):
         """
-        Tests some simple shelter_find() calls.
+        Tests the shelter_find() method.
         """
 
         for shelter in self.api.shelter_find(location='30127'):
@@ -92,7 +92,7 @@ class ShelterTests(BaseCase):
 
     def test_shelter_get(self):
         """
-        Tests some simple shelter_get() calls.
+        Tests the shelter_get() method.
         """
 
         shelter = self.api.shelter_get(id='GA137')
@@ -112,6 +112,18 @@ class ShelterTests(BaseCase):
         # This returns a generator of pet ID strings.
         for pet_id in self.api.shelter_getpets(id="GA137", output="id"):
             self.assertIsInstance(pet_id, basestring)
+
+    def test_shelter_listbybreed(self):
+        """
+        Tests the shelter_listbybreed() call.
+        """
+
+        # This returns a generator of shelter IDs.
+        for shelter_id in self.api.shelter_listbybreed(
+            animal="dog",
+            breed="Pug",
+        ):
+            self.assertIsInstance(shelter_id, basestring)
 
 #noinspection PyClassicStyleClass
 class BreedTests(BaseCase):
