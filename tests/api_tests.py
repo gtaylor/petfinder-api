@@ -70,7 +70,10 @@ class PetTests(BaseCase):
         Tests the pet_find() method.
         """
 
-        for record in self.api.pet_find(animal="dog", location="30127"):
+        for record in self.api.pet_find(
+            animal="dog", location="29678", output="basic",
+            breed="Treeing Walker Coonhound", count=200,
+        ):
             self._check_pet_record(record)
 
 
@@ -120,8 +123,7 @@ class ShelterTests(BaseCase):
 
         # This returns a generator of shelter IDs.
         for shelter_id in self.api.shelter_listbybreed(
-            animal="dog",
-            breed="Pug",
+            animal="dog", breed="Pug",
         ):
             self.assertIsInstance(shelter_id, basestring)
 
@@ -142,5 +144,5 @@ class BreedTests(BaseCase):
         # What animal is das?
         self.assertRaises(InvalidRequestError,
             self.api.breed_list,
-            animal="aliens"
+                animal="aliens"
         )

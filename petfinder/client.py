@@ -11,7 +11,7 @@ import datetime
 import requests
 import pytz
 from lxml import etree
-from petfinder.exceptions import get_exception_class_from_status_code
+from petfinder.exceptions import get_exception_class_from_status_code, RecordDoesNotExistError
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ class PetFinderClient(object):
         self.endpoint = endpoint
         # Endpoint must end in trailing slash in order for us to tack
         # methods on the end.
-        if not self.endpoint.endswith('/'):
-            self.endpoint += '/'
+        if not self.endpoint.endswith("/"):
+            self.endpoint += "/"
 
     def _call_api(self, method, data):
         """
@@ -57,10 +57,10 @@ class PetFinderClient(object):
 
         # Developer API keys, auth tokens, and other standard, required args.
         data.update({
-            'key': self.api_key,
+            "key": self.api_key,
             # No API methods currently use this, but we're ready for it,
             # should that change.
-            'token': self.api_auth_token,
+            "token": self.api_auth_token,
         })
 
         # Ends up being a full URL+path.
@@ -94,7 +94,7 @@ class PetFinderClient(object):
         :returns: A list of breed names.
         """
 
-        root = self._call_api('breed.list', kwargs)
+        root = self._call_api("breed.list", kwargs)
 
         breeds = []
         for breed in root.find("breeds"):
@@ -136,7 +136,7 @@ class PetFinderClient(object):
         # straight over to the dict record.
         straight_copy_fields = [
             "id", "shelterId", "shelterPetId", "name", "animal", "mix",
-            "age", 'sex', "size", "description", "status", "lastUpdate",
+            "age", "sex", "size", "description", "status", "lastUpdate",
         ]
 
         for field in straight_copy_fields:
@@ -216,10 +216,28 @@ class PetFinderClient(object):
         :returns: A generator of pet record dicts.
         """
 
-        root = self._call_api('pet.find', kwargs)
+        # Used to determine whether to fail noisily if no results are returned.
+        has_records = False
 
-        for pet in root.findall("pets/pet"):
-            yield self._parse_pet_record(pet)
+        while True:
+            try:
+                root = self._call_api("pet.find", kwargs)
+            except RecordDoesNotExistError:
+                if not has_records:
+                    # No records seen yet, this really is empty.
+                    raise
+                # We've seen some records come through. We must have hit the
+                # end of the result set. Finish up silently.
+                return
+
+            for pet in root.findall("pets/pet"):
+                yield self._parse_pet_record(pet)
+                has_records = True
+
+            # This will determine at what offset we start the next query.
+            last_offset = root.find("lastOffset").text
+            kwargs["offset"] = last_offset
+
 
     def shelter_find(self, **kwargs):
         """
@@ -230,7 +248,7 @@ class PetFinderClient(object):
         :returns: A generator of shelter record dicts.
         """
 
-        root = self._call_api('shelter.find', kwargs)
+        root = self._call_api("shelter.find", kwargs)
 
         for shelter in root.find("shelters"):
             record = {}
