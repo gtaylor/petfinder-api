@@ -52,6 +52,7 @@ class PetFinderClient(object):
         :rtype: lxml.etree._Element
         :returns: The parsed document.
         """
+
         # Developer API keys, auth tokens, and other standard, required args.
         data.update({
             'key': self.api_key,
@@ -83,14 +84,31 @@ class PetFinderClient(object):
 
         return root
 
+    def breed_list(self, **kwargs):
+        """
+        breed.list wrapper. Returns a generator of breed record dicts matching
+        your search criteria.
+
+        :rtype: generator
+        :returns: A generator of breed record dicts.
+        """
+
+        root = self._call_api('breed.list', kwargs)
+
+        breeds = []
+        for breed in root.find("breeds"):
+            breeds.append(breed.text)
+        return breeds
+
     def shelter_find(self, **kwargs):
         """
-        Returns a generator of shelter record dicts matching your search
-        criteria.
+        shelter.find wrapper. Returns a generator of shelter record dicts
+        matching your search criteria.
 
         :rtype: generator
         :returns: A generator of shelter record dicts.
         """
+
         root = self._call_api('shelter.find', kwargs)
 
         for shelter in root.find("shelters"):
@@ -101,11 +119,13 @@ class PetFinderClient(object):
 
     def shelter_get(self, **kwargs):
         """
-        Given a shelter ID, retrieve its details in dict form.
+        shelter.get wrapper. Given a shelter ID, retrieve its details in
+        dict form.
 
         :rtype: dict
         :returns: The shelter's details.
         """
+
         root = self._call_api('shelter.get', kwargs)
 
         shelter = root.find("shelter")

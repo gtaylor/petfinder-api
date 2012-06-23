@@ -1,4 +1,5 @@
 import unittest
+from petfinder.exceptions import InvalidRequestError
 from tests.api_details import API_DETAILS
 import petfinder
 
@@ -40,7 +41,29 @@ class ShelterTests(BaseCase):
         """
         Tests some simple shelter_get() calls.
         """
+
         shelter = self.api.shelter_get(id='GA287')
         self.assertIsInstance(shelter, dict)
         self.assertTrue(shelter.has_key('id'))
         self.assertTrue(shelter.has_key('name'))
+
+
+#noinspection PyClassicStyleClass
+class BreedTests(BaseCase):
+    """
+    Tests for breed-related methods.
+    """
+
+    def test_breed_list(self):
+        """
+        Tests breed listing.
+        """
+        breeds = self.api.breed_list(animal="dog")
+        self.assertIsInstance(breeds, list)
+        self.assertTrue("American Bulldog" in breeds)
+
+        # What animal is das?
+        self.assertRaises(InvalidRequestError,
+            self.api.breed_list,
+            animal="aliens"
+        )
