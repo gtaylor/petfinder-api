@@ -1,4 +1,5 @@
 import unittest
+import datetime
 from pprint import pprint
 from petfinder.exceptions import InvalidRequestError
 from tests.api_details import API_DETAILS
@@ -28,6 +29,16 @@ class PetTests(BaseCase):
     Tests for pet-related methods.
     """
 
+    def _check_pet_record(self, record):
+        """
+        Given a pet record dict, make sure it's got some important fields.
+
+        :param dict record: The pet record to check.
+        """
+        self.assertTrue(record.has_key("id"))
+        self.assertTrue(record.has_key("name"))
+        self.assertIsInstance(record["lastUpdate"], datetime.datetime)
+
     def test_pet_getrandom(self):
         """
         Tests the pet_getrandom() method.
@@ -35,13 +46,11 @@ class PetTests(BaseCase):
 
         # output=full shows a full record.
         record = self.api.pet_getrandom(output="full")
-        self.assertTrue(record.has_key("id"))
-        self.assertTrue(record.has_key("name"))
+        self._check_pet_record(record)
 
         # output=full shows a full record.
         record = self.api.pet_getrandom(output="basic")
-        self.assertTrue(record.has_key("id"))
-        self.assertTrue(record.has_key("name"))
+        self._check_pet_record(record)
 
         # If output=id, we should get a random pet ID string.
         random_pet_id = self.api.pet_getrandom(output="id")
@@ -54,8 +63,15 @@ class PetTests(BaseCase):
 
         # The ID seen here is the Petfinder ID, not the shelter's ID.
         record = self.api.pet_get(id=23220812)
-        self.assertTrue(record.has_key("id"))
-        self.assertTrue(record.has_key("name"))
+        self._check_pet_record(record)
+
+    def test_pet_find(self):
+        """
+        Tests the pet_find() method.
+        """
+
+        for record in self.api.pet_find(animal="dog", location="30127"):
+            self._check_pet_record(record)
 
 
 #noinspection PyClassicStyleClass

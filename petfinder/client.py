@@ -118,10 +118,10 @@ class PetFinderClient(object):
 
     def _parse_pet_record(self, root):
         """
-        Given the root element of a pet.get or pet.getRandom response, pluck
+        Given a <pet> Element from a pet.get or pet.getRandom response, pluck
         out the pet record.
 
-        :param lxml.etree._Element root: The root node of the response.
+        :param lxml.etree._Element root: A <pet> tag Element.
         :rtype: dict
         :returns: An assembled pet record.
         """
@@ -142,7 +142,7 @@ class PetFinderClient(object):
         for field in straight_copy_fields:
             # For each field, just take the tag name and the text value to
             # copy to the record as key/val.
-            node = root.find("pet/%s" % field)
+            node = root.find(field)
             if node is None:
                 print "SKIPPING %s" % field
                 continue
@@ -150,12 +150,12 @@ class PetFinderClient(object):
 
         # Pets can be of multiple breeds. Find all of the <breed> tags and
         # stuff their text (breed names) into the record.
-        for breed in root.findall("pet/breeds/breed"):
+        for breed in root.findall("breeds/breed"):
             record["breeds"].append(breed.text)
 
         # We'll deviate slightly from the XML format here, and simply append
         # each photo entry to the record's "photo" key.
-        for photo in root.findall("pet/media/photos/photo"):
+        for photo in root.findall("media/photos/photo"):
             photo = {
                 "id": photo.get("id"),
                 "size": photo.get("size"),
@@ -164,11 +164,11 @@ class PetFinderClient(object):
             record["photos"].append(photo)
 
         # Has shots, no cats, altered, etc.
-        for option in root.findall("pet/options/option"):
+        for option in root.findall("options/option"):
             record["options"].append(option.text)
 
         # <contact> tag has some sub-tags that can be straight copied over.
-        contact = root.find("pet/contact")
+        contact = root.find("contact")
         if contact is not None:
             for field in contact:
                 record["contact"][field.tag] = field.text
@@ -187,7 +187,7 @@ class PetFinderClient(object):
         """
         root = self._call_api("pet.get", kwargs)
 
-        return self._parse_pet_record(root)
+        return self._parse_pet_record(root.find("pet"))
 
     def pet_getrandom(self, **kwargs):
         """
@@ -203,7 +203,21 @@ class PetFinderClient(object):
         if output_brevity == "id":
             return root.find("petIds/id").text
         else:
-            return self._parse_pet_record(root)
+            return self._parse_pet_record(root.find("pet"))
+
+    def pet_find(self, **kwargs):
+        """
+        pet.find wrapper. Returns a generator of pet record dicts
+        matching your search criteria.
+
+        :rtype: generator
+        :returns: A generator of pet record dicts.
+        """
+
+        root = self._call_api('pet.find', kwargs)
+
+        for pet in root.findall("pets/pet"):
+            yield self._parse_pet_record(pet)
 
     def shelter_find(self, **kwargs):
         """
