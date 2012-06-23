@@ -22,13 +22,6 @@ class BaseCase(unittest.TestCase):
             api_secret=API_DETAILS['API_SECRET']
         )
 
-
-#noinspection PyClassicStyleClass
-class PetTests(BaseCase):
-    """
-    Tests for pet-related methods.
-    """
-
     def _check_pet_record(self, record):
         """
         Given a pet record dict, make sure it's got some important fields.
@@ -38,6 +31,13 @@ class PetTests(BaseCase):
         self.assertTrue(record.has_key("id"))
         self.assertTrue(record.has_key("name"))
         self.assertIsInstance(record["lastUpdate"], datetime.datetime)
+
+
+#noinspection PyClassicStyleClass
+class PetTests(BaseCase):
+    """
+    Tests for pet-related methods.
+    """
 
     def test_pet_getrandom(self):
         """
@@ -95,11 +95,23 @@ class ShelterTests(BaseCase):
         Tests some simple shelter_get() calls.
         """
 
-        shelter = self.api.shelter_get(id='GA287')
+        shelter = self.api.shelter_get(id='GA137')
         self.assertIsInstance(shelter, dict)
         self.assertTrue(shelter.has_key('id'))
         self.assertTrue(shelter.has_key('name'))
 
+    def test_shelter_getpets(self):
+        """
+        Tests the shelter_getpets() method.
+        """
+
+        # This returns a generator of pet record dicts.
+        for record in self.api.shelter_getpets(id="GA137", output="basic"):
+            self._check_pet_record(record)
+
+        # This returns a generator of pet ID strings.
+        for pet_id in self.api.shelter_getpets(id="GA137", output="id"):
+            self.assertIsInstance(pet_id, basestring)
 
 #noinspection PyClassicStyleClass
 class BreedTests(BaseCase):

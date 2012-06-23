@@ -191,10 +191,12 @@ class PetFinderClient(object):
 
     def pet_getrandom(self, **kwargs):
         """
-        pet.getRandom wrapper. Returns a record dict for a random pet.
+        pet.getRandom wrapper. Returns a record dict or Petfinder ID
+        for a random pet.
 
-        :rtype: dict
-        :returns: A dict of pet data.
+        :rtype: dict or str
+        :returns: A dict of pet data if ``output`` is ``'basic'`` or ``'full'``,
+            and a string if ``output`` is ``'id'``.
         """
         root = self._call_api("pet.getRandom", kwargs)
 
@@ -253,3 +255,24 @@ class PetFinderClient(object):
             for field in shelter:
                 record[field.tag] = field.text
             return record
+
+    def shelter_getpets(self, **kwargs):
+        """
+        shelter.getPets wrapper. Given a shelter ID, retrieve either a list of
+        pet IDs (if ``output`` is ``'id'``), or a generator of pet record
+        dicts (if ``output`` is ``'full'`` or ``'basic'``).
+
+        :rtype: generator
+        :returns: Either a generator of pet ID strings or pet record dicts,
+            depending on the value of the ``output`` keyword.
+        """
+
+        root = self._call_api("shelter.getPets", kwargs)
+
+        if kwargs.get("output", "id") == "id":
+            pet_ids = root.findall("petIds/id")
+            for pet_id in pet_ids:
+                yield pet_id.text
+        else:
+            for pet in root.findall("pets/pet"):
+                yield self._parse_pet_record(pet)
