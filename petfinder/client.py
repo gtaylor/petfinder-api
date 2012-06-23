@@ -41,7 +41,7 @@ class PetFinderClient(object):
         if not self.endpoint.endswith("/"):
             self.endpoint += "/"
 
-    def _call_api(self, method, data):
+    def _do_api_call(self, method, data):
         """
         Convenience method to carry out a standard API call against the
         Petfinder API.
@@ -86,6 +86,54 @@ class PetFinderClient(object):
 
         return root
 
+    def _do_autopaginating_api_call(self, method, kwargs, parser_func):
+        """
+        Given an API method, the arguments passed to it, and a function to
+        hand parsing off to, loop through the record sets in the API call
+        until all records have been yielded.
+
+        This is mostly done this way to reduce duplication through the various
+        API methods.
+
+        :param basestring method: The API method on the endpoint.
+        :param dict kwargs: The kwargs from the top-level API method.
+        :param callable parser_func: A callable that is used for parsing the
+            output from the API call.
+        :rtype: generator
+        :returns: Returns a generator that may be returned by the top-level
+            API method.
+        """
+        # Used to determine whether to fail noisily if no results are returned.
+        has_records = {"has_records": False}
+
+        while True:
+            try:
+                root = self._do_api_call(method, kwargs)
+            except RecordDoesNotExistError:
+                if not has_records["has_records"]:
+                    # No records seen yet, this really is empty.
+                    raise
+                    # We've seen some records come through. We must have hit the
+                # end of the result set. Finish up silently.
+                return
+
+            # This is used to track whether this go around the call->parse
+            # loop yielded any records.
+            records_returned_by_this_loop = False
+            for record in parser_func(root, has_records):
+                yield record
+                # We saw a record, mark our tracker accordingly.
+                records_returned_by_this_loop = True
+                # There is a really fun bug in the Petfinder API with
+            # shelter.getpets where an offset is returned with no pets,
+            # causing an infinite loop.
+            if not records_returned_by_this_loop:
+                return
+
+            # This will determine at what offset we start the next query.
+            last_offset = root.find("lastOffset").text
+            kwargs["offset"] = last_offset
+
     def breed_list(self, **kwargs):
         """
         breed.list wrapper. Returns a list of breed name strings.
@@ -94,7 +142,7 @@ class PetFinderClient(object):
         :returns: A list of breed names.
         """
 
-        root = self._call_api("breed.list", kwargs)
+        root = self._do_api_call("breed.list", kwargs)
 
         breeds = []
         for breed in root.find("breeds"):
@@ -185,7 +233,7 @@ class PetFinderClient(object):
         :rtype: dict
         :returns: The pet's record dict.
         """
-        root = self._call_api("pet.get", kwargs)
+        root = self._do_api_call("pet.get", kwargs)
 
         return self._parse_pet_record(root.find("pet"))
 
@@ -198,7 +246,7 @@ class PetFinderClient(object):
         :returns: A dict of pet data if ``output`` is ``'basic'`` or ``'full'``,
             and a string if ``output`` is ``'id'``.
         """
-        root = self._call_api("pet.getRandom", kwargs)
+        root = self._do_api_call("pet.getRandom", kwargs)
 
         output_brevity = kwargs.get("output", "id")
 
@@ -206,44 +254,6 @@ class PetFinderClient(object):
             return root.find("petIds/id").text
         else:
             return self._parse_pet_record(root.find("pet"))
-
-    def _do_autopaginating_call(self, method, kwargs, parser_func):
-        """
-        Given an API method, the arguments passed to it, and a function to
-        hand parsing off to, loop through the record sets in the API call
-        until all records have been yielded.
-
-        This is mostly done this way to reduce duplication through the various
-        API methods.
-
-        :param basestring method: The API method on the endpoint.
-        :param dict kwargs: The kwargs from the top-level API method.
-        :param callable parser_func: A callable that is used for parsing the
-            output from the API call.
-        :rtype: generator
-        :returns: Returns a generator that may be returned by the top-level
-            API method.
-        """
-        # Used to determine whether to fail noisily if no results are returned.
-        has_records = {"has_records": False}
-
-        while True:
-            try:
-                root = self._call_api(method, kwargs)
-            except RecordDoesNotExistError:
-                if not has_records["has_records"]:
-                    # No records seen yet, this really is empty.
-                    raise
-                    # We've seen some records come through. We must have hit the
-                # end of the result set. Finish up silently.
-                return
-
-            for record in parser_func(root, has_records):
-                yield record
-
-            # This will determine at what offset we start the next query.
-            last_offset = root.find("lastOffset").text
-            kwargs["offset"] = last_offset
 
     def pet_find(self, **kwargs):
         """
@@ -258,7 +268,7 @@ class PetFinderClient(object):
 
         def pet_find_parser(root, has_records):
             """
-            The parser that is used with the ``_do_autopaginating_call``
+            The parser that is used with the ``_do_autopaginating_api_call``
             method for auto-pagination.
 
             :param lxml.etree._Element root: The root Element in the response.
@@ -271,7 +281,7 @@ class PetFinderClient(object):
                 has_records["has_records"] = True
                 yield self._parse_pet_record(pet)
 
-        return self._do_autopaginating_call(
+        return self._do_autopaginating_api_call(
             "pet.find", kwargs, pet_find_parser
         )
 
@@ -288,7 +298,7 @@ class PetFinderClient(object):
 
         def shelter_find_parser(root, has_records):
             """
-            The parser that is used with the ``_do_autopaginating_call``
+            The parser that is used with the ``_do_autopaginating_api_call``
             method for auto-pagination.
 
             :param lxml.etree._Element root: The root Element in the response.
@@ -302,7 +312,7 @@ class PetFinderClient(object):
                     record[field.tag] = field.text
                 yield record
 
-        return self._do_autopaginating_call(
+        return self._do_autopaginating_api_call(
             "shelter.find", kwargs, shelter_find_parser
         )
 
@@ -315,7 +325,7 @@ class PetFinderClient(object):
         :returns: The shelter's details.
         """
 
-        root = self._call_api("shelter.get", kwargs)
+        root = self._do_api_call("shelter.get", kwargs)
 
         shelter = root.find("shelter")
         for field in shelter:
@@ -335,15 +345,31 @@ class PetFinderClient(object):
             depending on the value of the ``output`` keyword.
         """
 
-        root = self._call_api("shelter.getPets", kwargs)
-
-        if kwargs.get("output", "id") == "id":
+        def shelter_getpets_parser_ids(root, has_records):
+            """
+            Parser for output=id.
+            """
             pet_ids = root.findall("petIds/id")
             for pet_id in pet_ids:
                 yield pet_id.text
-        else:
+
+        def shelter_getpets_parser_records(root, has_records):
+            """
+            Parser for output=full or output=basic.
+            """
             for pet in root.findall("pets/pet"):
                 yield self._parse_pet_record(pet)
+
+
+        # Depending on the output value, select the correct parser.
+        if kwargs.get("output", "id") == "id":
+            shelter_getpets_parser = shelter_getpets_parser_ids
+        else:
+            shelter_getpets_parser = shelter_getpets_parser_records
+
+        return self._do_autopaginating_api_call(
+            "shelter.getPets", kwargs, shelter_getpets_parser
+        )
 
     def shelter_listbybreed(self, **kwargs):
         """
@@ -354,7 +380,7 @@ class PetFinderClient(object):
         :returns: A generator of shelter IDs that have breed matches.
         """
 
-        root = self._call_api("shelter.listByBreed", kwargs)
+        root = self._do_api_call("shelter.listByBreed", kwargs)
 
         shelter_ids = root.findall("shelterIds/id")
         for shelter_id in shelter_ids:

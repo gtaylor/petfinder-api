@@ -116,13 +116,21 @@ class ShelterTests(BaseCase):
         Tests the shelter_getpets() method.
         """
 
-        # This returns a generator of pet record dicts.
-        for record in self.api.shelter_getpets(id="GA137", output="basic"):
-            self._check_pet_record(record)
+        try:
+            # This returns a generator of pet record dicts.
+            for record in self.api.shelter_getpets(id="GA137", output="basic"):
+                self._check_pet_record(record)
+        except LimitExceeded:
+            # We'll eventually hit this.
+            pass
 
-        # This returns a generator of pet ID strings.
-        for pet_id in self.api.shelter_getpets(id="GA137", output="id"):
-            self.assertIsInstance(pet_id, basestring)
+        try:
+            # This returns a generator of pet ID strings.
+            for pet_id in self.api.shelter_getpets(id="GA137", output="id"):
+                self.assertIsInstance(pet_id, basestring)
+        except LimitExceeded:
+            # We'll eventually hit this.
+            pass
 
     def test_shelter_listbybreed(self):
         """
