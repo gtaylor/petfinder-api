@@ -1,0 +1,9 @@
+.idea
+*.pyc
+*.tmp
+*.swp
+api_details.py
+dist
+build
+MANIFEST
+*.egg-info
