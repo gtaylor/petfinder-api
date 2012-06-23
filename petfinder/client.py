@@ -7,7 +7,9 @@ http://www.petfinder.com/developers
 """
 
 import logging
+import datetime
 import requests
+import pytz
 from lxml import etree
 from petfinder.exceptions import get_exception_class_from_status_code
 
@@ -86,11 +88,10 @@ class PetFinderClient(object):
 
     def breed_list(self, **kwargs):
         """
-        breed.list wrapper. Returns a generator of breed record dicts matching
-        your search criteria.
+        breed.list wrapper. Returns a list of breed name strings.
 
-        :rtype: generator
-        :returns: A generator of breed record dicts.
+        :rtype: list
+        :returns: A list of breed names.
         """
 
         root = self._call_api('breed.list', kwargs)
@@ -99,6 +100,110 @@ class PetFinderClient(object):
         for breed in root.find("breeds"):
             breeds.append(breed.text)
         return breeds
+
+    def _parse_datetime_str(self, dtime_str):
+        """
+        Given a standard datetime string (as seen throughout the Petfinder API),
+        spit out the corresponding UTC datetime instance.
+
+        :param str dtime_str: The datetime string to parse.
+        :rtype: datetime.datetime
+        :returns: The parsed datetime.
+        """
+
+        return datetime.datetime.strptime(
+            dtime_str,
+            "%Y-%m-%dT%H:%M:%SZ"
+        ).replace(tzinfo=pytz.utc)
+
+    def _parse_pet_record(self, root):
+        """
+        Given the root element of a pet.get or pet.getRandom response, pluck
+        out the pet record.
+
+        :param lxml.etree._Element root: The root node of the response.
+        :rtype: dict
+        :returns: An assembled pet record.
+        """
+        record = {
+            "breeds": [],
+            "photos": [],
+            "options": [],
+            "contact": {},
+        }
+
+        # These fields can just have their keys and text values copied
+        # straight over to the dict record.
+        straight_copy_fields = [
+            "id", "shelterId", "shelterPetId", "name", "animal", "mix",
+            "age", 'sex', "size", "description", "status", "lastUpdate",
+        ]
+
+        for field in straight_copy_fields:
+            # For each field, just take the tag name and the text value to
+            # copy to the record as key/val.
+            node = root.find("pet/%s" % field)
+            if node is None:
+                print "SKIPPING %s" % field
+                continue
+            record[field] = node.text
+
+        # Pets can be of multiple breeds. Find all of the <breed> tags and
+        # stuff their text (breed names) into the record.
+        for breed in root.findall("pet/breeds/breed"):
+            record["breeds"].append(breed.text)
+
+        # We'll deviate slightly from the XML format here, and simply append
+        # each photo entry to the record's "photo" key.
+        for photo in root.findall("pet/media/photos/photo"):
+            photo = {
+                "id": photo.get("id"),
+                "size": photo.get("size"),
+                "url": photo.text,
+            }
+            record["photos"].append(photo)
+
+        # Has shots, no cats, altered, etc.
+        for option in root.findall("pet/options/option"):
+            record["options"].append(option.text)
+
+        # <contact> tag has some sub-tags that can be straight copied over.
+        contact = root.find("pet/contact")
+        if contact is not None:
+            for field in contact:
+                record["contact"][field.tag] = field.text
+
+        # Parse lastUpdate so we have a useable datetime.datime object.
+        record["lastUpdate"] = self._parse_datetime_str(record["lastUpdate"])
+
+        return record
+
+    def pet_get(self, **kwargs):
+        """
+        pet.get wrapper. Returns a record dict for the requested pet.
+
+        :rtype: dict
+        :returns: The pet's record dict.
+        """
+        root = self._call_api("pet.get", kwargs)
+
+        return self._parse_pet_record(root)
+
+    def pet_getrandom(self, **kwargs):
+        """
+        pet.getRandom wrapper. Returns a record dict for a random pet.
+
+        :rtype: dict
+        :returns: A dict of pet data.
+        """
+        root = self._call_api("pet.getRandom", kwargs)
+
+        output_brevity = kwargs.get("output", "id")
+
+        if output_brevity == "id":
+            return root.find("petIds/id").text
+        else:
+            return self._parse_pet_record(root)
 
     def shelter_find(self, **kwargs):
         """
@@ -126,7 +231,7 @@ class PetFinderClient(object):
         :returns: The shelter's details.
         """
 
-        root = self._call_api('shelter.get', kwargs)
+        root = self._call_api("shelter.get", kwargs)
 
         shelter = root.find("shelter")
         for field in shelter:

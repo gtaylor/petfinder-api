@@ -1,4 +1,5 @@
 import unittest
+from pprint import pprint
 from petfinder.exceptions import InvalidRequestError
 from tests.api_details import API_DETAILS
 import petfinder
@@ -19,6 +20,42 @@ class BaseCase(unittest.TestCase):
             api_key=API_DETAILS['API_KEY'],
             api_secret=API_DETAILS['API_SECRET']
         )
+
+
+#noinspection PyClassicStyleClass
+class PetTests(BaseCase):
+    """
+    Tests for pet-related methods.
+    """
+
+    def test_pet_getrandom(self):
+        """
+        Tests the pet_getrandom() method.
+        """
+
+        # output=full shows a full record.
+        record = self.api.pet_getrandom(output="full")
+        self.assertTrue(record.has_key("id"))
+        self.assertTrue(record.has_key("name"))
+
+        # output=full shows a full record.
+        record = self.api.pet_getrandom(output="basic")
+        self.assertTrue(record.has_key("id"))
+        self.assertTrue(record.has_key("name"))
+
+        # If output=id, we should get a random pet ID string.
+        random_pet_id = self.api.pet_getrandom(output="id")
+        self.assertIsInstance(random_pet_id, basestring)
+
+    def test_pet_get(self):
+        """
+        Tests the pet_get() method.
+        """
+
+        # The ID seen here is the Petfinder ID, not the shelter's ID.
+        record = self.api.pet_get(id=23220812)
+        self.assertTrue(record.has_key("id"))
+        self.assertTrue(record.has_key("name"))
 
 
 #noinspection PyClassicStyleClass

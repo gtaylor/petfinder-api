@@ -1,3 +1,4 @@
 requests
 nose
 lxml
+pytz
