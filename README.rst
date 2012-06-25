@@ -6,6 +6,11 @@ petfinder-api
 
 This is a simple Python wrapper to Petfinder.com's XML API.
 
+Documentation
+-------------
+
+Full documentation is located at http://petfinder-api.readthedocs.org/
+
 License
 -------
 
