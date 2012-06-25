@@ -1,0 +1,18 @@
+.. _GitHub project: https://github.com/gtaylor/petfinder-api
+.. _issue tracker: https://github.com/gtaylor/petfinder-api/issues
+.. _@gctaylor Twitter: https://twitter.com/#!/gctaylor
+
+.. _Python: http://python.org
+.. _nose: http://somethingaboutorange.com/mrl/projects/nose/
+
+.. _virtualenv: http://pypi.python.org/pypi/virtualenv
+.. _virtualenvwrapper: http://www.doughellmann.com/projects/virtualenvwrapper/
+
+.. _git: http://git-scm.com/
+
+.. _GitHub: https://github.com/
+
+.. _BSD License: http://opensource.org/licenses/bsd-license.php
+.. _Petfinder: http://www.petfinder.com/
+.. _Petfinder API: http://www.petfinder.com/developers/api-key
+.. _Petfinder API docs: http://www.petfinder.com/developers/api-docs

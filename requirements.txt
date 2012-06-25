@@ -2,3 +2,4 @@ requests
 nose
 lxml
 pytz
+sphinx

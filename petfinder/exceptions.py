@@ -90,7 +90,7 @@ STATUS_CODE_MAPPING = {
 }
 
 
-def get_exception_class_from_status_code(status_code):
+def _get_exception_class_from_status_code(status_code):
     """
     Utility function that accepts a status code, and spits out a reference
     to the correct exception class to raise.

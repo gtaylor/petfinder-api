@@ -11,7 +11,7 @@ import datetime
 import requests
 import pytz
 from lxml import etree
-from petfinder.exceptions import get_exception_class_from_status_code, RecordDoesNotExistError
+from petfinder.exceptions import _get_exception_class_from_status_code, RecordDoesNotExistError
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,10 @@ class PetFinderClient(object):
     Simple client for the Petfinder API. You'll want to pull your API details
     from http://www.petfinder.com/developers/api-key and instantiate this
     class with said credentials.
+
+    Refer to http://www.petfinder.com/developers/api-docs for the required
+    kwargs for each method. It is safe to ignore the ``key`` argument, as this
+    client handles setting that for you.
     """
 
     def __init__(self, api_key, api_secret, endpoint="http://api.petfinder.com/"):
@@ -49,8 +53,8 @@ class PetFinderClient(object):
         :param basestring method: The API method name to call.
         :param dict data: Key/value parameters to send to the API method.
             This varies based on the method.
-        :raises: A number of PetfinderAPIError sub-classes, depending on
-            what went wrong.
+        :raises: A number of :py:exc:`petfinder.exceptions.PetfinderAPIError``
+            sub-classes, depending on what went wrong.
         :rtype: lxml.etree._Element
         :returns: The parsed document.
         """
@@ -68,15 +72,13 @@ class PetFinderClient(object):
         # Bombs away!
         response = requests.get(url, params=data)
 
-        print "TXT", response.content
-
         # Parse and return an ElementTree instance containing the document.
         root = etree.fromstring(response.content)
 
         # If this is anything but '100', it's an error.
         status_code = root.find("header/status/code").text
         # If this comes back as non-None, we know we've got problems.
-        exc_class = get_exception_class_from_status_code(status_code)
+        exc_class = _get_exception_class_from_status_code(status_code)
         if exc_class:
             # Sheet, sheet, errar! Raise the appropriate error, and pass
             # the accompanying error message as the exception message.
@@ -133,21 +135,6 @@ class PetFinderClient(object):
             # This will determine at what offset we start the next query.
             last_offset = root.find("lastOffset").text
             kwargs["offset"] = last_offset
-
-    def breed_list(self, **kwargs):
-        """
-        breed.list wrapper. Returns a list of breed name strings.
-
-        :rtype: list
-        :returns: A list of breed names.
-        """
-
-        root = self._do_api_call("breed.list", kwargs)
-
-        breeds = []
-        for breed in root.find("breeds"):
-            breeds.append(breed.text)
-        return breeds
 
     def _parse_datetime_str(self, dtime_str):
         """
@@ -226,6 +213,21 @@ class PetFinderClient(object):
 
         return record
 
+    def breed_list(self, **kwargs):
+        """
+        breed.list wrapper. Returns a list of breed name strings.
+
+        :rtype: list
+        :returns: A list of breed names.
+        """
+
+        root = self._do_api_call("breed.list", kwargs)
+
+        breeds = []
+        for breed in root.find("breeds"):
+            breeds.append(breed.text)
+        return breeds
+
     def pet_get(self, **kwargs):
         """
         pet.get wrapper. Returns a record dict for the requested pet.
@@ -262,8 +264,9 @@ class PetFinderClient(object):
 
         :rtype: generator
         :returns: A generator of pet record dicts.
-        :raises: LimitExceeded once you have reached the maximum number of
-            records your credentials allow you to receive.
+        :raises: :py:exc:`petfinder.exceptions.LimitExceeded` once
+            you have reached the maximum number of records your credentials
+            allow you to receive.
         """
 
         def pet_find_parser(root, has_records):
@@ -292,8 +295,9 @@ class PetFinderClient(object):
 
         :rtype: generator
         :returns: A generator of shelter record dicts.
-        :raises: LimitExceeded once you have reached the maximum number of
-            records your credentials allow you to receive.
+        :raises: :py:exc:`petfinder.exceptions.LimitExceeded` once you have
+            reached the maximum number of records your credentials allow you
+            to receive.
         """
 
         def shelter_find_parser(root, has_records):
@@ -343,6 +347,9 @@ class PetFinderClient(object):
         :rtype: generator
         :returns: Either a generator of pet ID strings or pet record dicts,
             depending on the value of the ``output`` keyword.
+        :raises: :py:exc:`petfinder.exceptions.LimitExceeded` once you have
+            reached the maximum number of records your credentials allow you
+            to receive.
         """
 
         def shelter_getpets_parser_ids(root, has_records):
