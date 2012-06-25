@@ -10,8 +10,6 @@ except ImportError:
         """
         return
 
-from petfinder.version import __version__
-
 required = [
     'requests',
     'pytz',
@@ -23,7 +21,7 @@ scripts = [
 
 setup(
     name='petfinder',
-    version=__version__,
+    version='0.3',
     description="A simple wrapper around Petfinder's API",
     long_description=open('README.rst').read(),
     author='Greg Taylor',
