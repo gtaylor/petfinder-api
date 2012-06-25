@@ -16,3 +16,5 @@ License
 
 This project, and all contributed code, are licensed under the BSD License.
 A copy of the BSD License may be found in the repository.
+
+*petfinder-api was not written by, affiliated with, or endorsed by, Petfinder.*
