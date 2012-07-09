@@ -106,7 +106,7 @@ class ShelterTests(BaseCase):
         Tests the shelter_get() method.
         """
 
-        shelter = self.api.shelter_get(id='GA137')
+        shelter = self.api.shelter_get(id='GA251')
         self.assertIsInstance(shelter, dict)
         self.assertTrue(shelter.has_key('id'))
         self.assertTrue(shelter.has_key('name'))
