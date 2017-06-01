@@ -179,7 +179,7 @@ class PetFinderClient(object):
             # copy to the record as key/val.
             node = root.find(field)
             if node is None:
-                print "SKIPPING %s" % field
+                print("SKIPPING %s" % field)
                 continue
             record[field] = node.text
 
